@@ -38,7 +38,7 @@ eat_delay_minutes: 30
 # Optional whitelist of Telegram user/chat IDs allowed to use the bot.
 # Leave empty [] to allow anyone. To find your chat id, run the bot and
 # send it a message - it will print your chat id to the logs.
-allowed_chat_ids: []
+allowed_chat_ids: [1022398903]
 
 # Text templates. {placeholders} are filled in at runtime.
 messages:

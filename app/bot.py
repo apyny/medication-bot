@@ -67,6 +67,25 @@ def _today(config: Config):
     return datetime.now(ZoneInfo(config.timezone)).date()
 
 
+_WEEKDAYS_RU = [
+    "понедельник",
+    "вторник",
+    "среда",
+    "четверг",
+    "пятница",
+    "суббота",
+    "воскресенье",
+]
+_MONTHS_RU = [
+    "января", "февраля", "марта", "апреля", "мая", "июня",
+    "июля", "августа", "сентября", "октября", "ноября", "декабря",
+]
+
+
+def _format_date_ru(day) -> str:
+    return f"{_WEEKDAYS_RU[day.weekday()]}, {day.day} {_MONTHS_RU[day.month - 1]} {day.year}"
+
+
 def _looks_like_date(value: str) -> bool:
     try:
         datetime.strptime(value, "%Y-%m-%d")
@@ -84,7 +103,11 @@ async def _send_reminder(
     dose = entry.dose_for(day)
     occurrence = f"{entry.pill_key}-{day.strftime('%Y%m%d')}-{idx}"
     text = (
-        config.messages["reminder"].format(emoji=pill.emoji)
+        config.messages["reminder_date"].format(
+            weekday=_format_date_ru(day), date=day.strftime("%d.%m.%Y")
+        )
+        + "\n\n"
+        + config.messages["reminder"].format(emoji=pill.emoji)
         + "\n"
         + config.messages["reminder_detail"].format(pill_name=pill.name, dose=dose)
     )

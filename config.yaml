@@ -42,6 +42,7 @@ allowed_chat_ids: [1022398903]
 
 # Text templates. {placeholders} are filled in at runtime.
 messages:
+  reminder_date: "{weekday}"
   reminder: "{emoji} It's time to take your pill!"
   reminder_detail: "{pill_name} — {dose}"
   took_confirm: "✅ Taken! Logged at {time} ({pill_name}, {dose})."

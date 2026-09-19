@@ -160,6 +160,7 @@ def load_config() -> Config:
     allowed = raw.get("allowed_chat_ids") or []
 
     default_messages: dict[str, str] = {
+        "reminder_date": "{weekday}",
         "reminder": "{emoji} It's time to take your pill!",
         "reminder_detail": "{pill_name} — {dose}",
         "took_confirm": "✅ Taken! Logged at {time} ({pill_name}, {dose}).",

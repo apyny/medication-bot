@@ -1,0 +1,12 @@
+services:
+  bot:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      # Bind the service-account key + known-chats file so they survive restarts.
+      - ./service_account.json:/app/service_account.json:ro
+      - ./known_chats.json:/app/known_chats.json
+    environment:
+      - GOOGLE_CREDENTIALS_FILE=service_account.json

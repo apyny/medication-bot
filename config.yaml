@@ -1,0 +1,49 @@
+# =====================================================================
+# Medication reminder bot - configuration
+# Edit this file to set pill names, the daily schedule and messages.
+# Copy config.yaml as-is (it's read from disk at startup).
+# =====================================================================
+
+# Definitions of the pill types used in the schedule.
+# "pill" in the schedule below must reference a key from this section.
+pills:
+  big:
+    name: "Big pill"
+    emoji: "💊"
+    # Optional fixed dose text; can be overridden per schedule entry.
+    dose: "1 big pill"
+  small:
+    name: "Small pill"
+    emoji: "💊"
+    dose: "1 small pill"
+
+# Daily schedule. Each entry triggers a reminder at "time" (24h HH:MM).
+#   time  - local time (in the TIMEZONE from .env) to send the reminder
+#   pill  - which pill type (must be a key from `pills`)
+#   dose  - optional dose text shown in the reminder (defaults to pill.dose)
+schedule:
+  - time: "07:00"
+    pill: big
+    dose: "1 big pill"
+
+# Minutes after "took it" until the "you can eat now" notification.
+eat_delay_minutes: 30
+
+# Optional whitelist of Telegram user/chat IDs allowed to use the bot.
+# Leave empty [] to allow anyone. To find your chat id, run the bot and
+# send it a message - it will print your chat id to the logs.
+allowed_chat_ids: []
+
+# Text templates. {placeholders} are filled in at runtime.
+messages:
+  reminder: "{emoji} It's time to take your pill!"
+  reminder_detail: "{pill_name} — {dose}"
+  took_confirm: "✅ Taken! Logged at {time} ({pill_name}, {dose})."
+  skip_confirm: "⏭️ Skipped this dose. I won't remind you to eat."
+  eat_now: "🍽️ 30 minutes have passed — you can eat now!"
+  already_handled: "This reminder was already handled."
+  unauthorized: "Sorry, you are not allowed to use this bot."
+  stats_header: "📊 Medication statistics (last {days} days):"
+  stats_none: "No entries recorded yet."
+  stats_line: "• {pill_name}: {count} taken"
+  stats_total: "Total taken: {total}"

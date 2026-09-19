@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.env
+service_account.json
+known_chats.json
+.git/
+.venv/
+venv/
+.pytest_cache/

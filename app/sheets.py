@@ -13,7 +13,7 @@ from google.oauth2 import service_account
 logger = logging.getLogger(__name__)
 
 # Column layout of the medication log sheet.
-HEADERS = ["Timestamp", "Date", "Time", "Pill", "Dose", "Status"]
+HEADERS = ["Timestamp", "Date", "Time", "Pill", "Dose", "Status", "Comment"]
 STATUS_TAKEN = "taken"
 STATUS_SKIPPED = "skipped"
 
@@ -60,12 +60,14 @@ class SheetsLogger:
         return self.worksheet is not None
 
     def _ensure_headers(self) -> None:
+        """Ensure the header row matches HEADERS (adds new columns if needed)."""
         ws = self.worksheet
         if ws is None:
             return
         try:
-            if ws.row_count == 0 or not ws.row_values(1) or ws.row_values(1)[0] != HEADERS[0]:
-                ws.append_row(HEADERS)
+            existing = ws.row_values(1) or []
+            if existing != HEADERS:
+                ws.update("A1", [HEADERS])
         except Exception as exc:
             logger.error("Could not write headers: %s", exc)
 
@@ -88,6 +90,7 @@ class SheetsLogger:
             pill_name,
             dose,
             status,
+            "",  # Comment (edited via /comment)
         ]
         try:
             self._ensure_headers()
@@ -96,6 +99,38 @@ class SheetsLogger:
         except Exception as exc:
             logger.error("Failed to append row to spreadsheet: %s", exc)
             return False
+
+    def set_comment(self, date_str: str, text: str) -> bool:
+        """Set/overwrite the comment for a given date (YYYY-MM-DD).
+
+        Applies the comment to every existing row for that date; if there is no
+        row yet, appends a comment-only placeholder row for the day.
+        """
+        ws = self.worksheet
+        if ws is None:
+            return False
+        try:
+            self._ensure_headers()
+            values = ws.get_all_values()
+        except Exception as exc:
+            logger.error("Could not read spreadsheet for comment: %s", exc)
+            return False
+
+        date_col = HEADERS.index("Date") + 1  # 2
+        comment_col = HEADERS.index("Comment") + 1  # 7
+        updated = False
+        for row_no, row in enumerate(values[1:], start=2):
+            if len(row) >= date_col and row[date_col - 1] == date_str:
+                ws.update_cell(row_no, comment_col, text)
+                updated = True
+        if not updated:
+            # No entry for the day yet -> create a comment-only row.
+            now = datetime.now().astimezone()
+            ws.append_row(
+                [now.isoformat(), date_str, "", "", "", "", text],
+                value_input_option="USER_ENTERED",
+            )
+        return True
 
     # ------------------------------------------------------------- stats
     def stats(self, days: int = 7):

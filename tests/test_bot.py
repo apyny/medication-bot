@@ -111,5 +111,41 @@ class SheetsStatsTest(unittest.TestCase):
         self.assertIsNone(logger.stats(days=7))
 
 
+class SheetsCommentTest(unittest.TestCase):
+    from app.sheets import HEADERS
+
+    def _make_logger(self, ws):
+        from app.sheets import SheetsLogger
+
+        logger = object.__new__(SheetsLogger)
+        logger.sheet_id = "test"
+        logger.timezone_str = "UTC"
+        logger.client = None
+        logger._worksheet = ws
+        return logger
+
+    def test_set_comment_updates_existing_row(self) -> None:
+        ws = MagicMock()
+        ws.row_values.return_value = self.HEADERS
+        ws.get_all_values.return_value = [
+            self.HEADERS,
+            ["t", "2026-09-19", "07:00", "Big pill", "88 mg", "taken", ""],
+        ]
+        logger = self._make_logger(ws)
+        logger.set_comment("2026-09-19", "good day")
+        # Comment column = 7th -> update_cell(row 2, col 7)
+        ws.update_cell.assert_called_once_with(2, 7, "good day")
+        ws.append_row.assert_not_called()
+
+    def test_set_comment_appends_new_day(self) -> None:
+        ws = MagicMock()
+        ws.row_values.return_value = self.HEADERS
+        ws.get_all_values.return_value = [self.HEADERS]
+        logger = self._make_logger(ws)
+        logger.set_comment("2026-09-20", "note")
+        ws.update_cell.assert_not_called()
+        ws.append_row.assert_called_once()
+
+
 if __name__ == "__main__":
     unittest.main()

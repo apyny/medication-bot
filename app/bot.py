@@ -64,6 +64,14 @@ def _today(config: Config):
     return datetime.now(ZoneInfo(config.timezone)).date()
 
 
+def _looks_like_date(value: str) -> bool:
+    try:
+        datetime.strptime(value, "%Y-%m-%d")
+        return True
+    except ValueError:
+        return False
+
+
 async def _send_reminder(
     app: Application, config: Config, chats: ChatRegistry, chat_id: int, idx: int
 ) -> None:
@@ -222,7 +230,7 @@ def build_application(config: Config, sheets: SheetsLogger) -> Application:
         await update.message.reply_text(
             f"👋 Hello! I'll remind you to take your pills.\n\n"
             f"Daily schedule:\n{entries}\n\n"
-            f"Commands:\n/start — this message\n/stats — view recent statistics\n/test — send a sample reminder"
+            f"Commands:\n/start — this message\n/stats — view recent statistics\n/test — send a sample reminder\n/comment — add a note for a day"
         )
 
     async def cmd_test(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -236,6 +244,36 @@ def build_application(config: Config, sheets: SheetsLogger) -> Application:
             await update.message.reply_text("No schedule entries configured.")
             return
         await _send_reminder(app, config, chats, chat_id, 0)
+
+    async def cmd_comment(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Set/edit the comment for a day: /comment 2026-09-19 <text> or /comment <text>."""
+        chat_id = update.effective_chat.id
+        chats.add(chat_id)
+        if not _allowed(chat_id):
+            await update.message.reply_text(config.messages["unauthorized"])
+            return
+        args = list(context.args or [])
+        comment_date = _today(config).isoformat()
+        if args and _looks_like_date(args[0]):
+            comment_date = args.pop(0)
+        text = " ".join(args).strip()
+        if not text:
+            await update.message.reply_text(
+                "How to set a comment:\n"
+                "• /comment <text> — for today\n"
+                "• /comment <YYYY-MM-DD> <text> — for a specific day\n"
+                "Example: /comment 2026-09-19 good mood"
+            )
+            return
+        ok = sheets.set_comment(comment_date, text)
+        if ok:
+            await update.message.reply_text(
+                f"✅ Comment saved for {comment_date}: \"{text}\""
+            )
+        else:
+            await update.message.reply_text(
+                "⚠️ Google Sheets is not configured, so the comment wasn't saved."
+            )
 
     async def cmd_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         chat_id = update.effective_chat.id
@@ -324,6 +362,7 @@ def build_application(config: Config, sheets: SheetsLogger) -> Application:
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("stats", cmd_stats))
     app.add_handler(CommandHandler("test", cmd_test))
+    app.add_handler(CommandHandler("comment", cmd_comment))
     app.add_handler(CallbackQueryHandler(on_callback))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, on_message))
 

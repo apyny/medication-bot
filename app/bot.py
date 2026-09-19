@@ -54,7 +54,10 @@ def _daily_job(
     app: Application, config: Config, chats: ChatRegistry, idx: int
 ):
     async def run(context: ContextTypes.DEFAULT_TYPE) -> None:
-        for cid in list(chats.chats):
+        # If the bot is locked to specific chats, send reminders only to them;
+        # otherwise send to every chat that has interacted with the bot.
+        targets = config.allowed_chat_ids or list(chats.chats)
+        for cid in targets:
             await _send_reminder(app, config, chats, cid, idx)
 
     return run

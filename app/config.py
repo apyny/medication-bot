@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -34,12 +35,32 @@ class Pill:
 
 
 @dataclass
+class Alternating:
+    """Daily alternating dose, anchored to a reference date.
+
+    doses[0] is taken on reference_date, doses[1] the next day, and so on
+    cyclically. E.g. reference 2026-09-19 -> "88 mg", then "100 mg", "88 mg", ...
+    """
+
+    reference_date: date
+    doses: list[str]
+
+
+@dataclass
 class ScheduleEntry:
     time: str  # "HH:MM"
     hour: int
     minute: int
     pill_key: str
     dose: str
+    alternating: Alternating | None = None
+
+    def dose_for(self, day: date) -> str:
+        """Return the dose for a given calendar day."""
+        if self.alternating:
+            offset = (day - self.alternating.reference_date).days
+            return self.alternating.doses[offset % len(self.alternating.doses)]
+        return self.dose
 
 
 @dataclass
@@ -106,6 +127,24 @@ def load_config() -> Config:
                 f"schedule entry at time {time_str!r} references unknown pill {pill_key!r}"
             )
         dose = entry.get("dose") or pills[pill_key].dose
+
+        alternating = None
+        alt_raw = entry.get("alternating")
+        if alt_raw:
+            try:
+                ref_date = date.fromisoformat(str(alt_raw.get("reference_date")))
+            except ValueError as exc:
+                raise RuntimeError(
+                    f"Invalid alternating reference_date in schedule entry "
+                    f"{time_str!r}: {alt_raw.get('reference_date')!r}. Use YYYY-MM-DD."
+                ) from exc
+            doses = [str(d) for d in (alt_raw.get("doses") or [])]
+            if not doses:
+                raise RuntimeError(
+                    f"alternating entry {time_str!r} needs a non-empty 'doses' list"
+                )
+            alternating = Alternating(reference_date=ref_date, doses=doses)
+
         schedule.append(
             ScheduleEntry(
                 time=time_str,
@@ -113,6 +152,7 @@ def load_config() -> Config:
                 minute=minute,
                 pill_key=pill_key,
                 dose=dose,
+                alternating=alternating,
             )
         )
 

@@ -60,18 +60,22 @@ def _daily_job(
     return run
 
 
+def _today(config: Config):
+    return datetime.now(ZoneInfo(config.timezone)).date()
+
+
 async def _send_reminder(
     app: Application, config: Config, chats: ChatRegistry, chat_id: int, idx: int
 ) -> None:
     entry = config.schedule[idx]
     pill = config.pills[entry.pill_key]
-    occurrence = f"{entry.pill_key}-{datetime.now().strftime('%Y%m%d')}-{idx}"
+    day = _today(config)
+    dose = entry.dose_for(day)
+    occurrence = f"{entry.pill_key}-{day.strftime('%Y%m%d')}-{idx}"
     text = (
         config.messages["reminder"].format(emoji=pill.emoji)
         + "\n"
-        + config.messages["reminder_detail"].format(
-            pill_name=pill.name, dose=entry.dose
-        )
+        + config.messages["reminder_detail"].format(pill_name=pill.name, dose=dose)
     )
     try:
         await app.bot.send_message(
@@ -127,6 +131,21 @@ class ChatRegistry:
             logger.warning("Could not save %s: %s", self.path, exc)
 
 
+def _schedule_summary(config: Config) -> str:
+    lines = []
+    for e in config.schedule:
+        pill = config.pills[e.pill_key]
+        if e.alternating:
+            doses = ", ".join(e.alternating.doses)
+            lines.append(
+                f"• {pill.emoji} {e.time} — {pill.name} (alternates: {doses}, "
+                f"from {e.alternating.reference_date.isoformat()})"
+            )
+        else:
+            lines.append(f"• {pill.emoji} {e.time} — {pill.name} ({e.dose})")
+    return "\n".join(lines)
+
+
 def build_application(config: Config, sheets: SheetsLogger) -> Application:
     chats = ChatRegistry()
     # Seed from config whitelist so reminders go out even before first message.
@@ -152,7 +171,7 @@ def build_application(config: Config, sheets: SheetsLogger) -> Application:
     def _handle_take(chat_id: int, pill_key: str, occurrence: str) -> tuple[str, bool]:
         entry = next((e for e in config.schedule if e.pill_key == pill_key), None)
         pill = config.pills[pill_key]
-        dose = entry.dose if entry else pill.dose
+        dose = entry.dose_for(_today(config)) if entry else pill.dose
         key = (chat_id, occurrence)
         if key in handled:
             return config.messages["already_handled"], False
@@ -169,7 +188,7 @@ def build_application(config: Config, sheets: SheetsLogger) -> Application:
     def _handle_skip(chat_id: int, pill_key: str, occurrence: str) -> tuple[str, bool]:
         entry = next((e for e in config.schedule if e.pill_key == pill_key), None)
         pill = config.pills[pill_key]
-        dose = entry.dose if entry else pill.dose
+        dose = entry.dose_for(_today(config)) if entry else pill.dose
         key = (chat_id, occurrence)
         if key in handled:
             return config.messages["already_handled"], False
@@ -199,10 +218,7 @@ def build_application(config: Config, sheets: SheetsLogger) -> Application:
         if not _allowed(chat_id):
             await update.message.reply_text(config.messages["unauthorized"])
             return
-        entries = "\n".join(
-            f"• {config.pills[e.pill_key].emoji} {e.time} — {config.pills[e.pill_key].name} ({e.dose})"
-            for e in config.schedule
-        )
+        entries = _schedule_summary(config)
         await update.message.reply_text(
             f"👋 Hello! I'll remind you to take your pills.\n\n"
             f"Daily schedule:\n{entries}\n\n"

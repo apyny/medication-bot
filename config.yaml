@@ -21,10 +21,16 @@ pills:
 #   time  - local time (in the TIMEZONE from .env) to send the reminder
 #   pill  - which pill type (must be a key from `pills`)
 #   dose  - optional dose text shown in the reminder (defaults to pill.dose)
+#   alternating - optional: daily alternating dose.
+#     reference_date: a known date; doses[0] is taken on that date, doses[1] the
+#                     next day, and so on, alternating daily.
 schedule:
   - time: "07:00"
     pill: big
-    dose: "1 big pill"
+    dose: "88 mg"
+    alternating:
+      reference_date: "2026-09-19"
+      doses: ["88 mg", "100 mg"]
 
 # Minutes after "took it" until the "you can eat now" notification.
 eat_delay_minutes: 30

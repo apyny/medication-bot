@@ -44,6 +44,34 @@ class ConfigTest(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             _parse_time("noon")
 
+    def test_alternating_dose_for(self) -> None:
+        from datetime import date
+
+        from app.config import Alternating, ScheduleEntry
+
+        entry = ScheduleEntry(
+            time="07:00",
+            hour=7,
+            minute=0,
+            pill_key="big",
+            dose="88 mg",
+            alternating=Alternating(
+                reference_date=date(2026, 9, 19),  # 88 mg on this date
+                doses=["88 mg", "100 mg"],
+            ),
+        )
+        # Reference day -> 88 mg; next day -> 100 mg; alternating thereafter.
+        self.assertEqual(entry.dose_for(date(2026, 9, 19)), "88 mg")
+        self.assertEqual(entry.dose_for(date(2026, 9, 20)), "100 mg")
+        self.assertEqual(entry.dose_for(date(2026, 9, 21)), "88 mg")
+        self.assertEqual(entry.dose_for(date(2026, 9, 22)), "100 mg")
+
+        # Without alternating config, the static dose is returned.
+        static = ScheduleEntry(
+            time="07:00", hour=7, minute=0, pill_key="big", dose="1 pill"
+        )
+        self.assertEqual(static.dose_for(date(2026, 9, 22)), "1 pill")
+
 
 class SheetsStatsTest(unittest.TestCase):
     def _make_logger(self, rows):

@@ -2,10 +2,38 @@
 from __future__ import annotations
 
 import logging
+import os
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 from .bot import build_application
 from .config import load_config
 from .sheets import SheetsLogger
+
+
+class _HealthHandler(BaseHTTPRequestHandler):
+    """Minimal HTTP endpoint so hosts (e.g. Railway) can health-check the bot.
+
+    The bot itself only polls Telegram and exposes no web server; without an
+    HTTP listener some hosts mark the container unhealthy. This responds 200
+    to any request on the configured PORT.
+    """
+
+    def do_GET(self) -> None:  # noqa: N802 (stdlib casing)
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain")
+        self.end_headers()
+        self.wfile.write(b"ok")
+
+    def log_message(self, *args) -> None:  # keep health checks out of logs
+        pass
+
+
+def _start_health_server() -> None:
+    port = int(os.getenv("PORT", "8080"))
+    server = HTTPServer(("0.0.0.0", port), _HealthHandler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    logging.getLogger("medication-bot").info("Health server listening on :%s", port)
 
 
 def main() -> None:
@@ -29,6 +57,8 @@ def main() -> None:
             "Google Sheets logging is DISABLED. Configure GOOGLE_SHEET_ID and "
             "credentials per SETUP.md to enable history."
         )
+
+    _start_health_server()
 
     application = build_application(config, sheets)
     logger.info("Bot is polling Telegram. Press Ctrl+C to stop.")

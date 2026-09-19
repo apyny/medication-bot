@@ -161,17 +161,17 @@ def load_config() -> Config:
 
     default_messages: dict[str, str] = {
         "reminder_date": "{weekday}",
-        "reminder": "{emoji} It's time to take your pill!",
+        "reminder": "{emoji} Пора принять таблетку!",
         "reminder_detail": "{pill_name} — {dose}",
-        "took_confirm": "✅ Taken! Logged at {time} ({pill_name}, {dose}).",
-        "skip_confirm": "⏭️ Skipped this dose. I won't remind you to eat.",
-        "eat_now": "🍽️ 30 minutes have passed — you can eat now!",
-        "already_handled": "This reminder was already handled.",
-        "unauthorized": "Sorry, you are not allowed to use this bot.",
-        "stats_header": "📊 Medication statistics (last {days} days):",
-        "stats_none": "No entries recorded yet.",
-        "stats_line": "• {pill_name}: {count} taken",
-        "stats_total": "Total taken: {total}",
+        "took_confirm": "✅ Принято! Записано в {time} ({pill_name}, {dose}).",
+        "skip_confirm": "⏭️ Пропущено. Напоминание о еде отправлять не буду.",
+        "eat_now": "🍽️ Прошло 30 минут — можно есть!",
+        "already_handled": "Это напоминание уже обработано.",
+        "unauthorized": "Извините, вам запрещено использовать этого бота.",
+        "stats_header": "📊 Статистика приёма таблеток (за {days} дн.):",
+        "stats_none": "Записей пока нет.",
+        "stats_line": "• {pill_name}: {count} принято",
+        "stats_total": "Всего принято: {total}",
     }
     messages = _load_messages(raw, default_messages)
 

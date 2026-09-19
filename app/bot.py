@@ -126,10 +126,10 @@ async def _reminder_markup(occurrence: str, pill_key: str):
         [
             [
                 InlineKeyboardButton(
-                    "✅ Took it", callback_data=f"{TAKE_PREFIX}:{pill_key}:{occurrence}"
+                    "✅ Принял(а)", callback_data=f"{TAKE_PREFIX}:{pill_key}:{occurrence}"
                 ),
                 InlineKeyboardButton(
-                    "⏭️ Skip", callback_data=f"{SKIP_PREFIX}:{pill_key}:{occurrence}"
+                    "⏭️ Пропуск", callback_data=f"{SKIP_PREFIX}:{pill_key}:{occurrence}"
                 ),
             ]
         ]
@@ -172,8 +172,8 @@ def _schedule_summary(config: Config) -> str:
         if e.alternating:
             doses = ", ".join(e.alternating.doses)
             lines.append(
-                f"• {pill.emoji} {e.time} — {pill.name} (alternates: {doses}, "
-                f"from {e.alternating.reference_date.isoformat()})"
+                f"• {pill.emoji} {e.time} — {pill.name} (чередуется: {doses}, "
+                f"от {e.alternating.reference_date.isoformat()})"
             )
         else:
             lines.append(f"• {pill.emoji} {e.time} — {pill.name} ({e.dose})")
@@ -216,7 +216,7 @@ def build_application(config: Config, sheets: SheetsLogger) -> Application:
             time=now_str, pill_name=pill.name, dose=dose
         )
         if not logged:
-            text += "\n⚠️ (Could not save to Google Sheets.)"
+            text += "\n⚠️ (Не удалось сохранить в Google Sheets.)"
         return text, True
 
     def _handle_skip(chat_id: int, pill_key: str, occurrence: str) -> tuple[str, bool]:
@@ -254,9 +254,9 @@ def build_application(config: Config, sheets: SheetsLogger) -> Application:
             return
         entries = _schedule_summary(config)
         await update.message.reply_text(
-            f"👋 Hello! I'll remind you to take your pills.\n\n"
-            f"Daily schedule:\n{entries}\n\n"
-            f"Commands:\n/start — this message\n/stats — view recent statistics\n/test — send a sample reminder\n/comment — add a note for a day"
+            f"👋 Привет! Я буду напоминать о приёме таблеток.\n\n"
+            f"Расписание:\n{entries}\n\n"
+            f"Команды:\n/start — это сообщение\n/stats — статистика\n/test — тестовое напоминание\n/comment — заметка на день"
         )
 
     async def cmd_test(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -267,7 +267,7 @@ def build_application(config: Config, sheets: SheetsLogger) -> Application:
             await update.message.reply_text(config.messages["unauthorized"])
             return
         if not config.schedule:
-            await update.message.reply_text("No schedule entries configured.")
+            await update.message.reply_text("Расписание не настроено.")
             return
         await _send_reminder(app, config, chats, chat_id, 0)
 
@@ -285,20 +285,20 @@ def build_application(config: Config, sheets: SheetsLogger) -> Application:
         text = " ".join(args).strip()
         if not text:
             await update.message.reply_text(
-                "How to set a comment:\n"
-                "• /comment <text> — for today\n"
-                "• /comment <YYYY-MM-DD> <text> — for a specific day\n"
-                "Example: /comment 2026-09-19 good mood"
+                "Как добавить заметку:\n"
+                "• /comment <текст> — на сегодня\n"
+                "• /comment <ГГГГ-ММ-ДД> <текст> — на конкретный день\n"
+                "Пример: /comment 2026-09-19 хорошее самочувствие"
             )
             return
         ok = sheets.set_comment(comment_date, text)
         if ok:
             await update.message.reply_text(
-                f"✅ Comment saved for {comment_date}: \"{text}\""
+                f"✅ Комментарий для {comment_date} сохранён: \"{text}\""
             )
         else:
             await update.message.reply_text(
-                "⚠️ Google Sheets is not configured, so the comment wasn't saved."
+                "⚠️ Google Sheets не настроен, комментарий не сохранён."
             )
 
     async def cmd_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -317,7 +317,7 @@ def build_application(config: Config, sheets: SheetsLogger) -> Application:
         stats = sheets.stats(days=days)
         if stats is None:
             await update.message.reply_text(
-                "Google Sheets is not configured, so no statistics are available."
+                "Google Sheets не настроен, статистика недоступна."
             )
             return
         if not stats:

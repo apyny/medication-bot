@@ -1,6 +1,7 @@
 """Configuration loading: environment variables + config.yaml."""
 from __future__ import annotations
 
+import base64
 import os
 from dataclasses import dataclass
 from datetime import date
@@ -88,8 +89,17 @@ def load_config() -> Config:
     telegram_token = _env_str("TELEGRAM_BOT_TOKEN", required=True)
     google_sheet_id = _env_str("GOOGLE_SHEET_ID")
     google_credentials_json = _env_str("GOOGLE_CREDENTIALS_JSON")
+    credentials_b64 = _env_str("GOOGLE_CREDENTIALS_B64")
     timezone = _env_str("TIMEZONE", default="UTC")
     log_level = _env_str("LOG_LEVEL", default="INFO")
+
+    # base64-encoded credentials are the most robust to paste (single line, no
+    # newline/whitespace mangling), so prefer them over raw JSON.
+    if credentials_b64 and not google_credentials_json:
+        try:
+            google_credentials_json = base64.b64decode(credentials_b64).decode("utf-8")
+        except (ValueError, UnicodeDecodeError) as exc:
+            raise RuntimeError("GOOGLE_CREDENTIALS_B64 is not valid base64.") from exc
 
     credentials_file = _env_str("GOOGLE_CREDENTIALS_FILE", default="service_account.json")
     if not google_credentials_json and credentials_file:

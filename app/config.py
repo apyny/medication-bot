@@ -94,8 +94,8 @@ def load_config() -> Config:
     log_level = _env_str("LOG_LEVEL", default="INFO")
 
     # base64-encoded credentials are the most robust to paste (single line, no
-    # newline/whitespace mangling), so prefer them over raw JSON.
-    if credentials_b64 and not google_credentials_json:
+    # newline/whitespace mangling), so they take precedence over raw JSON.
+    if credentials_b64:
         try:
             google_credentials_json = base64.b64decode(credentials_b64).decode("utf-8")
         except (ValueError, UnicodeDecodeError) as exc:

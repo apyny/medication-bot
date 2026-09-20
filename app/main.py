@@ -50,6 +50,14 @@ def main() -> None:
         config.google_sheet_id,
         config.timezone,
     )
+    # Clear startup diagnostic so cloud logs show exactly what's happening.
+    if config.google_credentials_json:
+        logger.info("Sheets: credentials present, sheet_id=%r", config.google_sheet_id)
+    else:
+        logger.warning(
+            "Sheets: credentials MISSING — set GOOGLE_CREDENTIALS_B64 (or "
+            "GOOGLE_CREDENTIALS_JSON) in Railway Variables and redeploy."
+        )
     if sheets.enabled:
         logger.info("Google Sheets logging is ENABLED.")
     else:

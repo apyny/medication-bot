@@ -211,7 +211,7 @@ def build_application(config: Config, sheets: SheetsLogger) -> Application:
             return config.messages["already_handled"], False
         handled.add(key)
         logged = sheets.log_taken(pill.name, dose)
-        now_str = datetime.now().strftime("%H:%M")
+        now_str = datetime.now(ZoneInfo(config.timezone)).strftime("%H:%M")
         text = config.messages["took_confirm"].format(
             time=now_str, pill_name=pill.name, dose=dose
         )

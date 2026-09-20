@@ -5,6 +5,7 @@ import json
 import logging
 from datetime import datetime
 from typing import Optional
+from zoneinfo import ZoneInfo
 
 import gspread
 from google.auth import exceptions as google_auth_errors
@@ -82,7 +83,7 @@ class SheetsLogger:
         ws = self.worksheet
         if ws is None:
             return False
-        now = datetime.now().astimezone()
+        now = datetime.now(ZoneInfo(self.timezone_str))
         row = [
             now.isoformat(),
             now.strftime("%Y-%m-%d"),
@@ -125,7 +126,7 @@ class SheetsLogger:
                 updated = True
         if not updated:
             # No entry for the day yet -> create a comment-only row.
-            now = datetime.now().astimezone()
+            now = datetime.now(ZoneInfo(self.timezone_str))
             ws.append_row(
                 [now.isoformat(), date_str, "", "", "", "", text],
                 value_input_option="USER_ENTERED",
@@ -148,7 +149,7 @@ class SheetsLogger:
 
         from datetime import timedelta
 
-        cutoff = (datetime.now().astimezone() - timedelta(days=days)).date()
+        cutoff = (datetime.now(ZoneInfo(self.timezone_str)) - timedelta(days=days)).date()
         stats: dict[str, list[int]] = {}
         for row in values[1:]:
             if len(row) < 6:

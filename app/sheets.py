@@ -131,6 +131,24 @@ class SheetsLogger:
             )
         return True
 
+    def count_events(self, date_str: str) -> int:
+        """Number of taken+skipped rows recorded for a given date."""
+        ws = self.worksheet
+        if ws is None:
+            return 0
+        try:
+            values = ws.get_all_values()
+        except Exception as exc:
+            logger.error("Could not read spreadsheet for count: %s", exc)
+            return 0
+        if not values or values[0][:1] != HEADERS[:1]:
+            return 0
+        count = 0
+        for row in values[1:]:
+            if len(row) >= 4 and row[1] == date_str and row[3] in (STATUS_TAKEN, STATUS_SKIPPED):
+                count += 1
+        return count
+
     # ------------------------------------------------------------- stats
     def stats(self, days: int = 7):
         """Return a dict dose -> (taken_count, skipped_count) over last N days."""

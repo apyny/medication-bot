@@ -49,6 +49,20 @@ def schedule_daily(
             config.timezone,
         )
 
+    # End-of-day reconciliation: auto-record a skip for any unrecorded dose.
+    missed_time = dtime(
+        config.missed_check_hour, config.missed_check_minute, tzinfo=ZoneInfo(config.timezone)
+    )
+    app.job_queue.run_daily(
+        _missed_job(app, config, sheets), time=missed_time, name="missed_check"
+    )
+    logger.info(
+        "Scheduled missed-pill check at %02d:%02d %s",
+        config.missed_check_hour,
+        config.missed_check_minute,
+        config.timezone,
+    )
+
 
 def _daily_job(
     app: Application, config: Config, chats: ChatRegistry, idx: int
@@ -61,6 +75,40 @@ def _daily_job(
             await _send_reminder(app, config, chats, cid, idx)
 
     return run
+
+
+def _missed_job(app: Application, config: Config, sheets: SheetsLogger):
+    async def run(context: ContextTypes.DEFAULT_TYPE) -> None:
+        await _reconcile_missed(app, config, sheets)
+
+    return run
+
+
+async def _reconcile_missed(app: Application, config: Config, sheets: SheetsLogger) -> None:
+    """At end of day, log a 'skipped' for any expected dose with no record.
+
+    If a reminder went out but the person neither took it nor tapped Skip, this
+    records a skipped pill so the day's history is complete.
+    """
+    day = _today(config)
+    day_str = day.isoformat()
+    expected = len(config.schedule)
+    if expected == 0:
+        return
+    recorded = sheets.count_events(day_str)
+    missing = expected - recorded
+    if missing <= 0:
+        return
+    for _ in range(missing):
+        dose = config.schedule[0].dose_for(day)
+        sheets.log_skipped(dose)
+    logger.info(
+        "Auto-recorded %s skipped dose(s) for %s (expected %s, recorded %s)",
+        missing,
+        day_str,
+        expected,
+        recorded,
+    )
 
 
 def _today(config: Config):

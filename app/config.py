@@ -76,6 +76,8 @@ class Config:
     eat_delay_minutes: int
     allowed_chat_ids: list[int]
     messages: dict[str, str]
+    missed_check_hour: int = 23
+    missed_check_minute: int = 30
 
 
 def _load_messages(raw: dict[str, Any], defaults: dict[str, str]) -> dict[str, str]:
@@ -185,6 +187,12 @@ def load_config() -> Config:
     }
     messages = _load_messages(raw, default_messages)
 
+    # Time of day when we auto-record a missed pill if there was no record.
+    missed_hour, missed_minute = 23, 30
+    missed_raw = raw.get("missed_check_time")
+    if missed_raw is not None and str(missed_raw).strip():
+        missed_hour, missed_minute = _parse_time(str(missed_raw))
+
     if not telegram_token:
         raise RuntimeError("TELEGRAM_BOT_TOKEN is required. See SETUP.md.")
 
@@ -199,6 +207,8 @@ def load_config() -> Config:
         eat_delay_minutes=eat_delay_minutes,
         allowed_chat_ids=[int(c) for c in allowed],
         messages=messages,
+        missed_check_hour=missed_hour,
+        missed_check_minute=missed_minute,
     )
 
 

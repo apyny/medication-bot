@@ -35,6 +35,10 @@ schedule:
 # Minutes after "took it" until the "you can eat now" notification.
 eat_delay_minutes: 30
 
+# End-of-day time (HH:MM) to auto-record a "skipped" for any expected dose that
+# has no record that day (neither taken nor skipped). Leave empty to disable.
+missed_check_time: "23:30"
+
 # Optional whitelist of Telegram user/chat IDs allowed to use the bot.
 # Leave empty [] to allow anyone. To find your chat id, run the bot and
 # send it a message - it will print your chat id to the logs.

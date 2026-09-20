@@ -146,6 +146,68 @@ class SheetsCommentTest(unittest.TestCase):
         ws.update_cell.assert_not_called()
         ws.append_row.assert_called_once()
 
+    def test_count_events_ignores_comment_rows(self) -> None:
+        ws = MagicMock()
+        ws.get_all_values.return_value = [
+            self.HEADERS,
+            ["t", "2026-09-20", "100 мг", "taken", ""],
+            ["t", "2026-09-20", "", "", "note"],  # comment-only, not counted
+            ["t", "2026-09-19", "88 мг", "skipped", ""],
+        ]
+        logger = self._make_logger(ws)
+        self.assertEqual(logger.count_events("2026-09-20"), 1)
+        self.assertEqual(logger.count_events("2026-09-19"), 1)
+        self.assertEqual(logger.count_events("2026-09-21"), 0)
+
+    def test_reconcile_records_missed_pill(self) -> None:
+        import asyncio
+        from unittest.mock import patch
+
+        from app.bot import _reconcile_missed
+
+        with patch.dict(
+            "os.environ",
+            {
+                "TELEGRAM_BOT_TOKEN": "123:test",
+                "GOOGLE_CREDENTIALS_FILE": "",
+                "GOOGLE_CREDENTIALS_JSON": "{}",
+                "TIMEZONE": "Europe/Moscow",
+            },
+            clear=False,
+        ):
+            from app.config import load_config
+
+            cfg = load_config()
+        sheets = MagicMock()
+        sheets.count_events.return_value = 0  # nothing recorded today
+        asyncio.run(_reconcile_missed(None, cfg, sheets))
+        # One schedule entry, nothing recorded -> one skipped logged.
+        self.assertEqual(sheets.log_skipped.call_count, len(cfg.schedule))
+
+    def test_reconcile_skips_when_recorded(self) -> None:
+        import asyncio
+        from unittest.mock import patch
+
+        from app.bot import _reconcile_missed
+
+        with patch.dict(
+            "os.environ",
+            {
+                "TELEGRAM_BOT_TOKEN": "123:test",
+                "GOOGLE_CREDENTIALS_FILE": "",
+                "GOOGLE_CREDENTIALS_JSON": "{}",
+                "TIMEZONE": "Europe/Moscow",
+            },
+            clear=False,
+        ):
+            from app.config import load_config
+
+            cfg = load_config()
+        sheets = MagicMock()
+        sheets.count_events.return_value = len(cfg.schedule)  # all recorded
+        asyncio.run(_reconcile_missed(None, cfg, sheets))
+        sheets.log_skipped.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

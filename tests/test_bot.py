@@ -94,16 +94,16 @@ class SheetsStatsTest(unittest.TestCase):
         old = (datetime.now() - timedelta(days=10)).strftime("%Y-%m-%d")
 
         rows = [
-            ["Timestamp", "Date", "Time", "Pill", "Dose", "Status"],
-            ["x", today, "09:00:00", "Big pill", "1 big pill", "taken"],
-            ["x", today, "21:00:00", "Small pill", "1 small pill", "taken"],
-            ["x", today, "21:00:00", "Small pill", "1 small pill", "skipped"],
-            ["x", old, "09:00:00", "Big pill", "1 big pill", "taken"],  # too old
+            ["Timestamp", "Date", "Dose", "Status", "Comment"],
+            ["x", today, "88 мг", "taken", ""],
+            ["x", today, "100 мг", "taken", ""],
+            ["x", today, "100 мг", "skipped", ""],
+            ["x", old, "88 мг", "taken", ""],  # too old
         ]
         logger = self._make_logger(rows)
         stats = logger.stats(days=7)
-        self.assertEqual(stats["Big pill"], [1, 0])
-        self.assertEqual(stats["Small pill"], [1, 1])
+        self.assertEqual(stats["88 мг"], [1, 0])
+        self.assertEqual(stats["100 мг"], [1, 1])
 
     def test_stats_handles_missing_sheet(self) -> None:
         logger = self._make_logger(None)
@@ -129,12 +129,12 @@ class SheetsCommentTest(unittest.TestCase):
         ws.row_values.return_value = self.HEADERS
         ws.get_all_values.return_value = [
             self.HEADERS,
-            ["t", "2026-09-19", "07:00", "Big pill", "88 mg", "taken", ""],
+            ["t", "2026-09-19", "88 мг", "taken", ""],
         ]
         logger = self._make_logger(ws)
         logger.set_comment("2026-09-19", "good day")
-        # Comment column = 7th -> update_cell(row 2, col 7)
-        ws.update_cell.assert_called_once_with(2, 7, "good day")
+        # Comment column = 5th -> update_cell(row 2, col 5)
+        ws.update_cell.assert_called_once_with(2, 5, "good day")
         ws.append_row.assert_not_called()
 
     def test_set_comment_appends_new_day(self) -> None:

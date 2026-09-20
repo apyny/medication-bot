@@ -210,7 +210,7 @@ def build_application(config: Config, sheets: SheetsLogger) -> Application:
         if key in handled:
             return config.messages["already_handled"], False
         handled.add(key)
-        logged = sheets.log_taken(pill.name, dose)
+        logged = sheets.log_taken(dose)
         now_str = datetime.now(ZoneInfo(config.timezone)).strftime("%H:%M")
         text = config.messages["took_confirm"].format(
             time=now_str, pill_name=pill.name, dose=dose
@@ -227,7 +227,7 @@ def build_application(config: Config, sheets: SheetsLogger) -> Application:
         if key in handled:
             return config.messages["already_handled"], False
         handled.add(key)
-        sheets.log_skipped(pill.name, dose)
+        sheets.log_skipped(dose)
         return config.messages["skip_confirm"], True
 
     async def _schedule_eat_now(chat_id: int, pill_name: str) -> None:
@@ -329,13 +329,10 @@ def build_application(config: Config, sheets: SheetsLogger) -> Application:
             return
         lines = [config.messages["stats_header"].format(days=days)]
         total = 0
-        for pill_key, pill in config.pills.items():
-            taken, skipped = stats.get(pill.name, (0, 0))
+        for dose, (taken, skipped) in stats.items():
             total += taken
             lines.append(
-                config.messages["stats_line"].format(
-                    pill_name=pill.name, count=taken
-                )
+                config.messages["stats_line"].format(pill_name=dose, count=taken)
             )
         lines.append(config.messages["stats_total"].format(total=total))
         await update.message.reply_text("\n".join(lines))

@@ -14,7 +14,7 @@ from google.oauth2 import service_account
 logger = logging.getLogger(__name__)
 
 # Column layout of the medication log sheet.
-HEADERS = ["Timestamp", "Date", "Time", "Pill", "Dose", "Status", "Comment"]
+HEADERS = ["Timestamp", "Date", "Dose", "Status", "Comment"]
 STATUS_TAKEN = "taken"
 STATUS_SKIPPED = "skipped"
 
@@ -68,18 +68,18 @@ class SheetsLogger:
         try:
             existing = ws.row_values(1) or []
             if existing != HEADERS:
-                ws.update("A1", [HEADERS])
+                ws.update(range_name="A1", values=[HEADERS])
         except Exception as exc:
             logger.error("Could not write headers: %s", exc)
 
     # ------------------------------------------------------------- logging
-    def log_taken(self, pill_name: str, dose: str) -> bool:
-        return self._append(pill_name, dose, STATUS_TAKEN)
+    def log_taken(self, dose: str) -> bool:
+        return self._append(dose, STATUS_TAKEN)
 
-    def log_skipped(self, pill_name: str, dose: str) -> bool:
-        return self._append(pill_name, dose, STATUS_SKIPPED)
+    def log_skipped(self, dose: str) -> bool:
+        return self._append(dose, STATUS_SKIPPED)
 
-    def _append(self, pill_name: str, dose: str, status: str) -> bool:
+    def _append(self, dose: str, status: str) -> bool:
         ws = self.worksheet
         if ws is None:
             return False
@@ -87,8 +87,6 @@ class SheetsLogger:
         row = [
             now.isoformat(),
             now.strftime("%Y-%m-%d"),
-            now.strftime("%H:%M:%S"),
-            pill_name,
             dose,
             status,
             "",  # Comment (edited via /comment)
@@ -118,7 +116,7 @@ class SheetsLogger:
             return False
 
         date_col = HEADERS.index("Date") + 1  # 2
-        comment_col = HEADERS.index("Comment") + 1  # 7
+        comment_col = HEADERS.index("Comment") + 1  # 5
         updated = False
         for row_no, row in enumerate(values[1:], start=2):
             if len(row) >= date_col and row[date_col - 1] == date_str:
@@ -128,14 +126,14 @@ class SheetsLogger:
             # No entry for the day yet -> create a comment-only row.
             now = datetime.now(ZoneInfo(self.timezone_str))
             ws.append_row(
-                [now.isoformat(), date_str, "", "", "", "", text],
+                [now.isoformat(), date_str, "", "", text],
                 value_input_option="USER_ENTERED",
             )
         return True
 
     # ------------------------------------------------------------- stats
     def stats(self, days: int = 7):
-        """Return a dict pill_name -> (taken_count, skipped_count) over last N days."""
+        """Return a dict dose -> (taken_count, skipped_count) over last N days."""
         ws = self.worksheet
         if ws is None:
             return None
@@ -152,7 +150,7 @@ class SheetsLogger:
         cutoff = (datetime.now(ZoneInfo(self.timezone_str)) - timedelta(days=days)).date()
         stats: dict[str, list[int]] = {}
         for row in values[1:]:
-            if len(row) < 6:
+            if len(row) < 4:
                 continue
             try:
                 date = datetime.strptime(row[1], "%Y-%m-%d").date()
@@ -160,9 +158,11 @@ class SheetsLogger:
                 continue
             if date < cutoff:
                 continue
-            pill = row[3]
-            status = row[5]
-            entry = stats.setdefault(pill, [0, 0])
+            dose = row[2]
+            status = row[3]
+            if not dose:
+                continue  # comment-only rows have no dose
+            entry = stats.setdefault(dose, [0, 0])
             if status == STATUS_TAKEN:
                 entry[0] += 1
             elif status == STATUS_SKIPPED:

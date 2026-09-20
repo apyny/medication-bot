@@ -173,7 +173,7 @@ def load_config() -> Config:
         "reminder_date": "{weekday}",
         "reminder": "{emoji} Пора принять таблетку!",
         "reminder_detail": "{pill_name} — {dose}",
-        "took_confirm": "✅ Принято! Записано в {time} ({pill_name}, {dose}).",
+        "took_confirm": "✅ Принято! Записано в {time}\nВыпита таблетка дозировкой {dose}",
         "skip_confirm": "⏭️ Пропущено. Напоминание о еде отправлять не буду.",
         "eat_now": "🍽️ Прошло 30 минут — можно есть!",
         "already_handled": "Это напоминание уже обработано.",
